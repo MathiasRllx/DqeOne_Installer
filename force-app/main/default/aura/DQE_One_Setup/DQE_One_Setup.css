@@ -1,0 +1,27 @@
+.THIS .cardStyle {
+    width: 850px;
+    min-height: 350px;
+    margin: 0 auto;
+}
+
+.THIS .custom-color {
+    color: rgb(51, 64, 125);
+}
+
+.THIS .inputStyle {
+    width:400px;
+}
+
+.THIS .titleStyle {
+    padding-top: 20px;
+    padding-left: -50px;
+}
+
+.THIS .spinnerStyle {
+    position: relative;
+    padding-top: 150px;
+}
+
+.THIS .vertical-center {
+    padding-top: 10%;
+  }

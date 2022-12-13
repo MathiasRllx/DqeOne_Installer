@@ -1,0 +1,214 @@
+<aura:component implements="force:appHostable,force:lightningQuickAction,lightning:actionOverride,flexipage:availableForAllPageTypes,lightning:isUrlAddressable,lightning:availableForFlowScreens,lightning:hasPageReference,force:hasRecordId" controller="Process" access="global">
+    
+    <aura:handler name="init" value="{!this}" action="{!c.onInit}"/>
+    
+    <lightning:empApi aura:id="empApi"/>
+
+    <!--Subscription Map for Event-->
+    <aura:attribute name="subscription" type="Map"/>
+
+    <!--Current Screen-->
+    <aura:attribute name="isInstalled" type="Boolean" default='false'/>
+    <aura:attribute name="isAuto" type="Boolean" default='false'/>
+    <aura:attribute name="isManual" type="Boolean" default='false'/>
+    <aura:attribute name="isSubmit" type="Boolean" default='false'/>
+    
+    <!--Process Bool-->
+    <aura:attribute name="isLoading" type="Boolean" default="false"/>
+    <aura:attribute name="processError" type="Boolean" default="false"/>
+ 
+    <!--Auto Installation Input-->
+    <aura:attribute name="userLicense" type="String" default='00000'/>
+    <aura:attribute name="userServerUrl" type="String"/>
+    <aura:attribute name="defaultServerUrl" type="String"/>
+    <aura:attribute name="isDefaultUrl" type="Boolean" default='false'/>
+    
+    <!--Installation Tools-->
+    <aura:attribute name="installationStep" type="String" default='Preparing Installation ...'/>
+    <aura:attribute name="currentStep" type="String" default='0'/>
+    
+    <aura:attribute name="autoInstallationStepList" type="List" default="['Deploy Remote Site', 'Deploy Metadata', 'Deploy Connected App', 'Deploy Auth Provider', 'Deploy Named Credential', 'Installation Success']"/>
+    <aura:attribute name="manualInstallationStepList" type="List" default="['Create the connected app with blah blah blah...', 'Create the Auth Provider with blah blah blah...', 'Create the Named Credential with blah blah blah...', 'Installation Success']"/>
+
+    <aura:if isTrue="{!and(equals(v.isAuto, false), equals(v.isManual, false))}">
+        <div>
+            <lightning:card class="cardStyle">
+                <div class="slds-text-align_center">
+                    <img src="{!$Resource.DqeLogo}" class="slds-p-bottom_large"/>
+                    <p class="custom-color"><lightning:formattedText class="slds-text-heading_medium" value="Enrich your Salesforce experience with the power of DQE Software technology."/></p><br/>
+                    <p class="custom-color"><lightning:formattedText class="slds-text-body_regular" value="Help your sales organization be more productive in Salesforce by enhancing your CRM Lead, Contact and Account Pages with"/></p>
+                    <p class="custom-color"><lightning:formattedRichText class="slds-text-heading_medium" value="&lt;b&gt;Data Quality&lt;/b&gt; insights."/></p><br/>
+                    <p><lightning:formattedText class="slds-text-body_small" value="Package Version 3.17"/></p><br/>
+                </div>
+
+                <aura:set attribute="footer">
+                    <div class="slds-text-align_center">
+                        <p><lightning:formattedText class="slds-text-body_regular" value="We just need to go trough some few steps to prepare your Salesforce organization."/></p><br/>
+                        <lightning:layout horizontalAlign="space">
+                            <lightning:layoutItem>
+                                <lightning:button variant="brand" label="Manual Setup" onclick="{!c.handleClickManual}"/>    
+                            </lightning:layoutItem>
+                            <lightning:layoutItem>
+                                <lightning:button variant="brand" label="Auto Setup" onclick="{!c.handleClickAuto}"/>
+                            </lightning:layoutItem>
+                        </lightning:layout>
+                    </div>
+                </aura:set>
+            </lightning:card>
+        </div>
+    </aura:if>
+
+    <aura:if isTrue="{!and(equals(v.isAuto, true), equals(v.isSubmit, false))}">
+        <div>
+            <lightning:card class="cardStyle">
+                <div class="slds-grid slds-grid_align-center">
+                    <div class="slds-col">
+                        <img src="{!$Resource.authentificationLogo}"/>
+                    </div>
+                    <div class="slds-col titleStyle">
+                        <p><lightning:formattedText class="slds-text-heading_large" value="Authentification"/></p>
+                    </div>
+                </div>
+
+                <div class="slds-grid slds-grid_vertical">
+                    <div class="slds-col slds-align_absolute-center">
+                        <p><lightning:formattedText class="slds-text-heading_small" value="Some steps of the setup requires an admin profil to be performed. Please authenticate.​"/></p>
+                    </div>
+                    <div class="slds-col slds-align_absolute-center slds-p-top_small">
+                        <lightning:input aura:id="field" label="DQE License Code" class="inputStyle" placeholder="Enter License" onchange='{!c.handleLicense}' value='{!v.userLicense}' required="true"/>
+                    </div>
+                    <div class="slds-col slds-align_absolute-center slds-p-top_small">
+                        <lightning:button variant="brand" type="submit" label="Submit" onclick="{!c.handleSubmit}"/>
+                    </div>
+                </div>
+            </lightning:card>
+        </div>
+    </aura:if>
+
+    <aura:if isTrue="{!and(equals(v.isAuto, true), equals(v.isSubmit, true))}">
+        <div>
+            <lightning:card class="cardStyle">
+                <div class="slds-p-top_large">
+                    <lightning:progressIndicator currentStep="{!v.currentStep}" hasError="{!v.processError}">
+                        <aura:iteration items="{!v.autoInstallationStepList}" var="step" indexVar="indexStep">
+                            <lightning:progressStep label="{!step}" value="{!indexStep}"/>
+                        </aura:iteration>
+                    </lightning:progressIndicator>
+                </div>
+                <div class="slds-grid slds-grid_vertical slds-p-top_large slds-p-bottom_large">
+    
+                    <aura:if isTrue="{!and(equals(v.isLoading, false), equals(v.isInstalled, true))}">
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:icon iconName="action:approval" size="large"></lightning:icon>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <p><lightning:formattedText class="slds-text-heading_large" value="Installation Success"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" label="Uninstall" onclick="{!c.handleUninstall}"/>
+                        </div>
+                    </aura:if>
+
+                    <aura:if isTrue="{!and(equals(v.isLoading, false), equals(v.installationStep, 'Deploy Named Credential'))}">
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <p><lightning:formattedText class="slds-text-heading_large" value="{!v.installationStep}"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:input aura:id="urlInput" type="url" label="Enter your https Server URL" class="inputStyle" placeholder="https://example.com" onchange="{!c.handleServerUrl}" value="{!v.userServerUrl}" disabled="{!v.isDefaultUrl}"/>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_small">
+                            <lightning:input aura:id="urlCheckbox" type="checkbox" label="Use default URL" onchange="{!c.handleCheckboxServerUrl}" checked="{!v.isDefaultUrl}"/>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" type="submit" label="Submit" onclick="{!c.handleSubmitServerUrl}"/>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" type="submit" label="Cancel" onclick="{!c.handleCancel}"/>
+                        </div>
+                    </aura:if>
+
+                    <aura:if isTrue="{!and(equals(v.isLoading, true), equals(v.processError, false))}">
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <p><lightning:formattedText class="slds-text-heading_large" value="{!v.installationStep}"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center spinnerStyle">
+                            <lightning:spinner variant="brand" size="large" alternativeText="Loading" />
+                        </div>
+                        <div class="slds-col slds-align_absolute-center">
+                            <p><lightning:formattedText class="slds-text-heading_small" value="This Step can take up to 10 seconds depending on the​"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center">                       
+                            <p><lightning:formattedText class="slds-text-heading_small" value="availability of your org deployment queue.​"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" type="submit" label="Cancel" onclick="{!c.handleCancel}"/>
+                        </div>
+                    </aura:if>
+
+                    <aura:if isTrue="{!and(equals(v.isLoading, true), equals(v.processError, true))}">
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <p><lightning:formattedText class="slds-text-heading_large" value="Error encountered during the installation ..."/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" type="submit" label="Restart Installation" onclick="{!c.handleUninstall}"/>
+                        </div>
+                    </aura:if>
+                </div>
+            </lightning:card>
+        </div>
+    </aura:if>
+
+    <aura:if isTrue="{!v.isManual}">
+        <div>
+            <lightning:card class="cardStyle">
+                <div class="slds-text-align_center slds-p-top_large">
+                    <p><lightning:formattedText class="slds-text-heading_large" value="Manual Setup Guide​"/></p>
+                </div>
+                <div class="slds-p-top_large">
+                    <lightning:progressIndicator currentStep="{!v.currentStep}" hasError="{!v.processError}">
+                        <aura:iteration items="{!v.manualInstallationStepList}" var="step" indexVar="indexStep">
+                            <lightning:progressStep label="{!step}" value="{!indexStep}"/>
+                        </aura:iteration>
+                    </lightning:progressIndicator>
+                </div>
+                
+                <div class="slds-grid slds-grid_vertical slds-p-top_large slds-p-bottom_large">
+                    
+                    <aura:if isTrue="{!and(equals(v.isLoading, false), equals(v.isInstalled, false))}">
+                        <div class="slds-col slds-text-align_center slds-p-top_large">
+                            <p><lightning:formattedText value="{!v.installationStep}"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" label="Check Step" onclick="{!c.handlerCheckStep}"/>
+                        </div>
+                        <aura:if isTrue="{!v.processError}">
+                            <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                                <p style="color:red"><lightning:formattedText value="Can't validate this step, Try Again"/></p>
+                            </div>
+                        </aura:if>
+                    </aura:if>
+
+                    <aura:if isTrue="{!and(equals(v.isLoading, false), equals(v.isInstalled, true))}">
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:icon iconName="action:approval" size="large"></lightning:icon>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <p><lightning:formattedText class="slds-text-heading_large" value="Installation Success"/></p>
+                        </div>
+                        <div class="slds-col slds-align_absolute-center slds-p-top_large">
+                            <lightning:button variant="brand" label="Uninstall" onclick="{!c.handleUninstall}"/>
+                        </div>
+                    </aura:if>
+
+                    <aura:if isTrue="{!v.isLoading}">
+                        <div class="slds-col slds-align_absolute-center spinnerStyle">
+                            <lightning:spinner variant="brand" size="medium" alternativeText="Loading" />
+                        </div>
+                    </aura:if>
+                </div>
+
+            </lightning:card>
+        </div>
+    </aura:if>
+
+</aura:component>	
